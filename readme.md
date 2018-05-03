@@ -1,5 +1,29 @@
 Quick Python script for checking if a Tumblr blog is available.
 
+Example use:
+
+    $ python tumblr_avail.py arstdhneioo xyz staff
+    arstdhneioo    AVAILABLE
+    xyz            purgatory
+    staff          taken
+
+Usage:
+
+    usage: tumblr_avail.py [-h] [-c CREDENTIAL_FILE] URL [URL ...]
+
+    checks if a tumblr blog url is available
+
+    positional arguments:
+      URL                   the url to check; for example.tumblr.com, enter
+                            "example"
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -c FILE, --credential-file FILE
+                            Filename of a credential file; Must be a UTF-8-encoded
+                            JSON file containing an `email` key and a `password`
+                            key. Default: creds.json
+
 It does need your password; unauthenticated requests to
 `www.tumblr.com/check_if_tumblelog_name_is_available` get blocked. The
 credential file `creds.json` should look like:
@@ -26,21 +50,6 @@ recall it happening in the past.
 
 Don’t use this to spam Tumblr, particularly because requests are attached to
 your account and you’ll probably get banned.
-
-    usage: tumblr_avail.py [-h] [-c CREDENTIAL_FILE] URL [URL ...]
-
-    checks if a tumblr blog url is available
-
-    positional arguments:
-      URL                   the url to check; for example.tumblr.com, enter
-                            "example"
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      -c FILE, --credential-file FILE
-                            Filename of a credential file; Must be a UTF-8-encoded
-                            JSON file containing an `email` key and a `password`
-                            key. Default: creds.json
 
 [unavailable]: https://tumblr.zendesk.com/hc/en-us/articles/230894108-Unavailable-inactive-URLs
 [terms of service]: https://www.tumblr.com/policy/en/terms-of-service
