@@ -1,7 +1,7 @@
-import tumblr_avail
+from tumblr_avail import *
 
 def test_isValid():
-    isValid = tumblr_avail.isValid
+    isValid = URLChecker.isvalidurl
     assert isValid('xyz')            == True
     assert isValid('staff')          == True
     assert isValid('s-taff')         == True
