@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-from typing import List, Dict, Iterable
+from typing import List, Dict, Iterable, Tuple
 import requests
 import argparse
 import json
@@ -31,7 +31,7 @@ class URLChecker():
         else:
             raise ValueError(f'login failure! {login.status_code}')
 
-    def check(self, url) -> (bool, str):
+    def check(self, url) -> Tuple[bool, str]:
         if not self.usable:
             raise ValueError('must be succesfully logged in to check a URL')
         if not URLChecker.isvalidurl(url):
@@ -79,6 +79,12 @@ class URLChecker():
     def __exit__(self, exc_type, exc_value, traceback):
         self.sess.get('https://www.tumblr.com/logout')
         self.usable = False
+
+    def __str__(self):
+        return f'URLChecker(usable={self.usable})'
+
+    def __repr__(self):
+        return str(self)
 
     def __make_payload(self, form) -> Dict:
         """
@@ -143,7 +149,7 @@ def getCreds(name='creds.json') -> Dict:
 def invalids(urls: Iterable[str]) -> List[str]:
     return [url for url in urls if not URLChecker.isvalidurl(url)]
 
-def checkAll(urls: Iterable[str], credfile='creds.json'):
+def checkAll(urls: Iterable[str], creds: Dict):
     badUrls = invalids(urls)
     if len(badUrls) > 0:
         print('URLs must be 1-31 characters long of only a-z 0-9 and - and must neither start nor end with a -', file=sys.stderr)
@@ -157,7 +163,6 @@ def checkAll(urls: Iterable[str], credfile='creds.json'):
     # format urls to correct width
     fmt = str(len(max(urls, key=len)) + 4)
 
-    creds = getCreds(credfile)
     with URLChecker(creds) as checker:
         for url in urls:
             checker.print_check(url, fmt)
@@ -171,13 +176,14 @@ def main():
         help='Filename of a credential file; Must be a UTF-8-encoded JSON file containing an `email` key and a `password` key. Default: creds.json')
     args = parser.parse_args()
 
+    creds = getCreds(args.credential_file)
+
     if len(args.URL) == 0:
-        creds = getCreds(args.credential_file)
         with URLChecker(creds) as checker:
             for line in sys.stdin:
                 checker.print_check(url)
     else:
-        checkAll(args.URL, args.credential_file)
+        checkAll(args.URL, creds)
 
 if __name__ == '__main__':
     main()
