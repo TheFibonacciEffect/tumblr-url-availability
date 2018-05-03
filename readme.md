@@ -35,10 +35,10 @@ credential file `creds.json` should look like:
 
 # Statuses
 
-When you ask `tumblr_avail.py` to check a blog, it’ll tell you one of three
-statuses: `AVAILABLE`, `taken`, or `purgatory`. The first two are
-self-explanatory (the url is available for taking or already taken) but the
-third one is a bit more complicated.
+When you ask `tumblr_avail.py` to check a blog, it’ll tell you one of a few
+statuses: `AVAILABLE`, `taken`, `purgatory`, or maybe something else if the code
+has bugs. The first two are self-explanatory (the url is available for taking or
+already taken) but the third one is a bit more complicated.
 
 The key lies in the [“unavailable / inactive URLs” Tumblr support
 page][unavailable], which says that “we don’t release taken or terminated
@@ -49,6 +49,10 @@ just gone, forever? This condition is called **PURGATORY.** You can’t have the
 URL, and nobody else can either. Are URLs ever released from purgatory? I’m not
 sure. That help article certainly implies they aren’t, but I vaguely recall it
 happening in the past.
+
+I've also marked URLs which Tumblr *says* are available but aren't — such as
+`www` (y’know, like `www.tumblr.com`? I want that to be my blog) — as *cursed*
+purgatory.
 
 Don’t use this to spam Tumblr, particularly because requests are attached to
 your account and you’ll probably get banned.

@@ -6,6 +6,8 @@ import json
 import sys
 import re
 import io
+import time
+import random
 from urllib.parse import urljoin
 
 import requests
@@ -54,13 +56,21 @@ class URLChecker():
 
         # check returns '1' if available and '' if not
         avail = r.text == '1'
-        if avail:
+        check = self.sess.get(f'https://{url}.tumblr.com/')
+        not_found = check.status_code == 404
+        actually_taken = check.text.startswith('<!DOCTYPE html><script>var __pbpa = true;</script>')
+        if avail and not_found:
             return True, 'available'
-        purgatory = self.sess.get(f'https://{url}.tumblr.com/').status_code == 404
-        if purgatory:
+        elif not avail and not_found:
+            # regular purgatory
             return False, 'purgatory'
-        else:
+        elif avail and not not_found and not actually_taken:
+            # falsely marked as available
+            return False, 'purgatory (cursed)'
+        elif not avail and actually_taken:
             return False, 'taken'
+        else:
+            return avail, 'mystery ' + ('(taken)' if avail else '(untaken)')
 
     def print_check(self, url, urlfmt='33'):
         print(format(url, urlfmt), end='')
@@ -153,7 +163,10 @@ def getCreds(name='creds.json') -> Dict:
 def invalids(urls: Iterable[str]) -> List[str]:
     return [url for url in urls if not URLChecker.isvalidurl(url)]
 
-def checkAll(urls: Iterable[str], creds: Dict):
+def delay(duration: Tuple[float, float]=(1, 3)):
+    time.sleep(random.uniform(duration[0], duration[1]))
+
+def checkAll(urls: Iterable[str], creds: Dict, delay_time: Tuple[float, float]=(1, 3)):
     badUrls = invalids(urls)
     if len(badUrls) > 0:
         print('URLs must be 1-31 characters long of only a-z 0-9 and - and must neither start nor end with a -', file=sys.stderr)
@@ -168,8 +181,12 @@ def checkAll(urls: Iterable[str], creds: Dict):
     fmt = str(len(max(urls, key=len)) + 4)
 
     with URLChecker(creds) as checker:
-        for url in urls:
+        last = len(urls) - 1
+        for i, url in enumerate(urls):
             checker.print_check(url, fmt)
+            if i != last:
+                # sleep to let the api rest, except on the last url (just exit)
+                delay(delay_time)
 
 def main():
     parser = argparse.ArgumentParser(
@@ -185,7 +202,10 @@ def main():
     if len(args.URL) == 0:
         with URLChecker(creds) as checker:
             for line in sys.stdin:
-                checker.print_check(url)
+                # skip comments
+                if not line.startswith('#'):
+                    checker.print_check(line.strip())
+                    delay(delay_time)
     else:
         checkAll(args.URL, creds)
 
