@@ -1,12 +1,14 @@
 #! /usr/bin/python
 
 from typing import List, Dict, Iterable, Tuple
-import requests
 import argparse
 import json
 import sys
 import re
 import io
+from urllib.parse import urljoin
+
+import requests
 from bs4 import BeautifulSoup
 
 class URLChecker():
@@ -37,7 +39,7 @@ class URLChecker():
         if not URLChecker.isvalidurl(url):
             raise ValueError(f'invalid url {url}')
 
-        url = 'https://www.tumblr.com/check_if_tumblelog_name_is_available'
+        endpoint = 'https://www.tumblr.com/check_if_tumblelog_name_is_available'
         # this is lying
         headers = {
             'Host': 'www.tumblr.com',
@@ -46,7 +48,7 @@ class URLChecker():
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36',
             'X-Requested-With': 'XMLHttpRequest',
         }
-        r = self.sess.post(url, data={'name': url}, headers=headers)
+        r = self.sess.post(endpoint, data={'name': url}, headers=headers)
         if not r.ok:
             raise ValueError(f'availability check for {url} failed')
 
@@ -126,6 +128,8 @@ class URLChecker():
 
         final_payload = self.__make_payload(form)
         final_payload.update(payload)
+        del payload
+
         act = form['action']
         if (not act.startswith('http://') and not act.startswith('https://')):
             # relative url
