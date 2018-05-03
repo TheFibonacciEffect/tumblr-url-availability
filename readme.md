@@ -57,6 +57,21 @@ purgatory.
 Don’t use this to spam Tumblr, particularly because requests are attached to
 your account and you’ll probably get banned.
 
+## Edge cases
+
+Example URLs with some edge cases; unhandled ones at the bottom
+
+URL | Case
+----|---------
+86  | Private blog (i.e. dashboard-only)
+92  | Password-protected
+87  | Purgatory
+88  | Taken (HTTP-only)
+www | Purgatory (cursed)
+1   | False positive (unhandled)
+014 | Mystery; HTML doesn’t start with regular theme code
+v   | Subdomain used for videos; alias for AWS maybe?
+
 # Dependencies
 
 * `beautifulsoup4`
