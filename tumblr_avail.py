@@ -41,6 +41,26 @@ class URLChecker():
         if not URLChecker.isvalidurl(url):
             raise ValueError(f'invalid url {url}')
 
+        check = self.sess.get(f'https://{url}.tumblr.com/')
+        not_found = check.status_code == 404
+        actually_taken = check.text.startswith('<!DOCTYPE html><script>var __pbpa = true;</script>')
+        pprot = not not_found and not actually_taken and '<form id="auth_password" method="post">' in check.text
+        priv = False
+
+        for req in check.history:
+            if ('Location' in req.headers
+                    and req.headers['Location'].startswith('https://www.tumblr.com/login_required')):
+                priv = True
+                break
+
+        if not not_found and actually_taken:
+            # no need to even hit the api
+            return False, 'taken'
+        elif not not_found and pprot:
+            return False, 'taken (password-protected)'
+        elif not not_found and priv:
+            return False, 'taken (private blog)'
+
         endpoint = 'https://www.tumblr.com/check_if_tumblelog_name_is_available'
         # this is lying
         headers = {
@@ -53,22 +73,17 @@ class URLChecker():
         r = self.sess.post(endpoint, data={'name': url}, headers=headers)
         if not r.ok:
             raise ValueError(f'availability check for {url} failed')
-
         # check returns '1' if available and '' if not
         avail = r.text == '1'
-        check = self.sess.get(f'https://{url}.tumblr.com/')
-        not_found = check.status_code == 404
-        actually_taken = check.text.startswith('<!DOCTYPE html><script>var __pbpa = true;</script>')
+
         if avail and not_found:
             return True, 'available'
         elif not avail and not_found:
             # regular purgatory
             return False, 'purgatory'
         elif avail and not not_found and not actually_taken:
-            # falsely marked as available
+            # falsely marked as available; stuff like `www`
             return False, 'purgatory (cursed)'
-        elif not avail and actually_taken:
-            return False, 'taken'
         else:
             return avail, 'mystery ' + ('(taken)' if avail else '(untaken)')
 
@@ -82,6 +97,7 @@ class URLChecker():
             print(info.upper())
         else:
             print(info)
+        return avail, info
 
     def __enter__(self):
         if not self.usable:
@@ -183,8 +199,8 @@ def checkAll(urls: Iterable[str], creds: Dict, delay_time: Tuple[float, float]=(
     with URLChecker(creds) as checker:
         last = len(urls) - 1
         for i, url in enumerate(urls):
-            checker.print_check(url, fmt)
-            if i != last:
+            avail, info = checker.print_check(url, fmt)
+            if i != last and 'taken' not in info:
                 # sleep to let the api rest, except on the last url (just exit)
                 delay(delay_time)
 
@@ -195,19 +211,23 @@ def main():
             help='a URL to check; for example.tumblr.com, enter "example". if none are entered URLs are read from stdin')
     parser.add_argument('-c', '--credential-file', default='creds.json', metavar='FILE',
         help='Filename of a credential file; Must be a UTF-8-encoded JSON file containing an `email` key and a `password` key. Default: creds.json')
+    parser.add_argument('-d', '--delay', nargs=2, type=float, default=[1, 3],
+        help='minimum and maximum delay between requests, in seconds')
     args = parser.parse_args()
 
     creds = getCreds(args.credential_file)
+    delay_time = tuple(args.delay)
 
     if len(args.URL) == 0:
         with URLChecker(creds) as checker:
             for line in sys.stdin:
                 # skip comments
                 if not line.startswith('#'):
-                    checker.print_check(line.strip())
-                    delay(delay_time)
+                    avail, info = checker.print_check(line.strip())
+                    if 'taken' not in info:
+                        delay(delay_time)
     else:
-        checkAll(args.URL, creds)
+        checkAll(args.URL, creds, delay_time=delay_time)
 
 if __name__ == '__main__':
     main()

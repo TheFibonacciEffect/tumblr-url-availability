@@ -33,7 +33,7 @@ credential file `creds.json` should look like:
         "password": "example"
     }
 
-# Statuses
+# Statuses & purgatory
 
 When you ask `tumblr_avail.py` to check a blog, it’ll tell you one of a few
 statuses: `AVAILABLE`, `taken`, `purgatory`, or maybe something else if the code
