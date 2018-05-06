@@ -59,7 +59,7 @@ your account and you’ll probably get banned.
 
 ## Edge cases
 
-Example URLs with some edge cases; unhandled ones at the bottom
+Edge cases with example URLs, ordered by how well they’re handled
 
 URL | Case
 ----|---------
