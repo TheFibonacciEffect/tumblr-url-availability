@@ -12,8 +12,9 @@ from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
+from tumblr_noauth import TumblrSession
 
-class URLChecker():
+class URLChecker(TumblrSession):
     def isvalidurl(url, correct=re.compile(r'[a-z0-9-]{1,32}')) -> bool:
         if len(url) == 0 or len(url) > 32:
             return False
@@ -23,25 +24,13 @@ class URLChecker():
             return False
         return True
 
-    def __init__(self, credentials):
-        """
-        credentials is a dict-like with 'email' and 'password'
-        """
-        self.usable = False
-        self.sess = requests.Session()
-        login = self.__login(credentials)
-        if login.ok:
-            self.usable = True
-        else:
-            raise ValueError(f'login failure! {login.status_code}')
-
     def check(self, url) -> Tuple[bool, str]:
         if not self.usable:
             raise ValueError('must be succesfully logged in to check a URL')
         if not URLChecker.isvalidurl(url):
             raise ValueError(f'invalid url {url}')
 
-        check = self.sess.get(f'https://{url}.tumblr.com/')
+        check = self.get(f'https://{url}.tumblr.com/')
         not_found = check.status_code == 404
         actually_taken = check.text.startswith('<!DOCTYPE html><script>var __pbpa = true;</script>')
         pprot = not not_found and not actually_taken and '<form id="auth_password" method="post">' in check.text
@@ -61,7 +50,7 @@ class URLChecker():
         elif not not_found and priv:
             return False, 'taken (private blog)'
 
-        endpoint = 'https://www.tumblr.com/check_if_tumblelog_name_is_available'
+        endpoint = 'check_if_tumblelog_name_is_available'
         # this is lying
         headers = {
             'Host': 'www.tumblr.com',
@@ -70,7 +59,7 @@ class URLChecker():
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36',
             'X-Requested-With': 'XMLHttpRequest',
         }
-        r = self.sess.post(endpoint, data={'name': url}, headers=headers)
+        r = self.post(endpoint, data={'name': url}, headers=headers)
         if not r.ok:
             raise ValueError(f'availability check for {url} failed')
         # check returns '1' if available and '' if not
@@ -99,79 +88,6 @@ class URLChecker():
             print(info)
         return avail, info
 
-    def __enter__(self):
-        if not self.usable:
-            raise ValueError(f'login failure! {login.status_code}')
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.sess.get('https://www.tumblr.com/logout')
-        self.usable = False
-
-    def __str__(self):
-        return f'URLChecker(usable={self.usable})'
-
-    def __repr__(self):
-        return str(self)
-
-    def __make_payload(self, form) -> Dict:
-        """
-        extract form <input>s to a dict
-        form: a BS4 element or an object with .find_all and .attrs
-        """
-        payload = {}
-        for inp in form.find_all('input'):
-            if 'name' in inp.attrs:
-                if 'value' in inp.attrs:
-                    val = inp.attrs['value']
-                else:
-                    val = ''
-                payload[inp.attrs['name']] = val
-        return payload
-
-    def __post_form(self, url: str, form=None, payload=None) -> requests.models.Response:
-        """
-        gets a form `form` from the page at `url` and posts its default values
-        along with the data in `payload` to the form's destination; this is
-        useful for capturing stuff like csrf tokens
-
-        form: a beautifulSoup dict for selecting the form
-        e.x. {'id': 'signup_form'}
-        payload: extra data to send
-        """
-        if form == None:
-            form = {}
-        if payload == None:
-            payload = {}
-
-        pg = self.sess.get(url)
-        if not pg.ok:
-            return pg
-
-        form = BeautifulSoup(pg.text, 'html.parser').find(**form)
-        if form == None:
-            raise ValueError('No form found on page!')
-
-        final_payload = self.__make_payload(form)
-        final_payload.update(payload)
-        del payload
-
-        act = form['action']
-        if (not act.startswith('http://') and not act.startswith('https://')):
-            # relative url
-            act = urljoin(pg.url, act)
-        return self.sess.post(act, data=final_payload)
-
-    def __login(self, creds) -> requests.models.Response:
-        return self.__post_form('https://www.tumblr.com/login',
-            form={'id': 'signup_form'},
-            payload={
-                'determine_email': creds['email'],
-                'user[email]':     creds['email'],
-                'user[password]':  creds['password'],
-            },
-        )
-
 def getCreds(name='creds.json') -> Dict:
     with open(name) as f:
         return json.load(f)
@@ -196,7 +112,7 @@ def checkAll(urls: Iterable[str], creds: Dict, delay_time: Tuple[float, float]=(
     # format urls to correct width
     fmt = str(len(max(urls, key=len)) + 4)
 
-    with URLChecker(creds) as checker:
+    with URLChecker(creds['email'], creds['password']) as checker:
         last = len(urls) - 1
         for i, url in enumerate(urls):
             avail, info = checker.print_check(url, fmt)
@@ -219,7 +135,7 @@ def main():
     delay_time = tuple(args.delay)
 
     if len(args.URL) == 0:
-        with URLChecker(creds) as checker:
+        with URLChecker(creds['email'], creds['password']) as checker:
             for line in sys.stdin:
                 # skip comments
                 if not line.startswith('#'):

@@ -76,6 +76,7 @@ v   | Subdomain used for videos; alias for AWS maybe?
 
 * `beautifulsoup4`
 * `requests`
+* `tumblr-noauth`
 
 [unavailable]: https://tumblr.zendesk.com/hc/en-us/articles/230894108-Unavailable-inactive-URLs
 [terms of service]: https://www.tumblr.com/policy/en/terms-of-service
